@@ -19,4 +19,8 @@ public class Register{
     private String mail;
     private String location;
     private String password;
+
+    @ManyToOne
+    @JoinColumn(name = "role_id")
+    private Role role;
 }
