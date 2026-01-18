@@ -1,60 +1,63 @@
 package com.example.app_shoper_backend.security;
 
-
-
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class MainSecurity {
 
-    public final UserDetailService userDetailService;
-    public final PasswordEncoder passwordEncoder;
+    private final UserDetailService userDetailService;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtFilter jwtFilter;
 
     // Constructor injection (industry standard)
-    public MainSecurity(UserDetailService userDetailService, PasswordEncoder passwordEncoder) {
+    public MainSecurity(UserDetailService userDetailService,
+                        PasswordEncoder passwordEncoder,
+                        JwtFilter jwtFilter) {
         this.userDetailService = userDetailService;
         this.passwordEncoder = passwordEncoder;
+        this.jwtFilter = jwtFilter;
     }
 
-    // 🔹 SecurityFilterChain
+    // 🔹 SecurityFilterChain - define security rules
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity
-                .cors(Customizer.withDefaults())
-                .csrf(csrf -> csrf.disable()) // JWT ke liye CSRF disable
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll() // login/register endpoints
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .authenticationProvider(daoAuthenticationProvider()); // provider add
+                .authenticationProvider(daoAuthenticationProvider());
 
-        return httpSecurity.build();
+        // 🔹
+        http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
     }
 
-    // 🔹 DaoAuthenticationProvider
+    // 🔹 DaoAuthenticationProvider - authenticate using UserDetailsService + PasswordEncoder
     @Bean
     public DaoAuthenticationProvider daoAuthenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setUserDetailsService(userDetailService);
-            provider.setPasswordEncoder(passwordEncoder);
-            return provider;
+        provider.setPasswordEncoder(passwordEncoder);
+        return provider;
     }
 
-    // 🔹 AuthenticationManager
     @Bean
-    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-        return http.getSharedObject(AuthenticationManager.class);
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 }

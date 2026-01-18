@@ -4,12 +4,14 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
 @Table(name = "register")
+@ToString(exclude = "role")
 public class Register{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,4 +25,7 @@ public class Register{
     @ManyToOne
     @JoinColumn(name = "role_id")
     private Role role;
+
+    @OneToOne(mappedBy = "register",cascade = CascadeType.ALL)
+    private MyShop myShop;
 }
